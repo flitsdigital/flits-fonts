@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <title>FontConv — Variable Font Converter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Converteer fonts tussen WOFF2, TTF, OTF en WOFF. Variable font-data blijft intact. Geen opslag, eigen server.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Flits Design System tokens ── */
+    :root {
+      --brand-yellow:      #FFF301;
+      --brand-yellow-soft: rgba(255, 243, 1, 0.15);
+
+      --bg-0: #070707;
+      --bg-1: #0F0F10;
+      --bg-2: #161616;
+      --bg-3: #19191A;
+      --bg-4: #1F1F1F;
+
+      --border-subtle: #1D1E1F;
+      --border-strong: #626465;
+
+      --fg-1:        #F1E7E7;
+      --fg-2:        #919193;
+      --fg-3:        #656565;
+      --fg-disabled: #3A3A3B;
+
+      --green-500:  #46A557;
+      --red-500:    #E54D2E;
+      --orange-500: #FFB223;
+
+      --r-xs:   2px;
+      --r-sm:   4px;
+      --r-md:   8px;
+      --r-lg:   10px;
+      --r-pill: 100px;
+
+      --font-sans: 'Syne', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --font-mono: 'DM Mono', ui-monospace, 'Cascadia Code', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg-0);
+      color: var(--fg-1);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* ── Layout ── */
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 0;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 20px;
+    }
+
+    .bolt-mark {
+      width: 26px;
+      height: 26px;
+      background: var(--brand-yellow-soft);
+      border: 1px solid rgba(255, 243, 1, 0.12);
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .wordmark {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--fg-1);
+      letter-spacing: -0.025em;
+    }
+
+    .header-sep {
+      color: var(--fg-3);
+      font-size: 13px;
+      font-weight: 400;
+      user-select: none;
+    }
+
+    .header-by {
+      font-size: 12px;
+      color: var(--fg-3);
+    }
+
+    .header-by a {
+      color: var(--fg-2);
+      text-decoration: none;
+      transition: color 120ms;
+    }
+    .header-by a:hover { color: var(--fg-1); }
+
+    /* ── Card ── */
+    .card {
+      background: var(--bg-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+
+    /* ── Drop zone ── */
+    .dropzone {
+      position: relative;
+      padding: 20px;
+      cursor: pointer;
+      transition: background 120ms;
+    }
+
+    .dropzone:hover,
+    .dropzone.drag-over {
+      background: rgba(255,255,255,0.015);
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .drop-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 32px 16px;
+      border: 1.5px dashed var(--border-strong);
+      border-radius: var(--r-md);
+      transition: border-color 120ms;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .dropzone:hover .drop-inner,
+    .dropzone.drag-over .drop-inner {
+      border-color: var(--fg-2);
+    }
+
+    .drop-icon { color: var(--fg-3); margin-bottom: 4px; }
+
+    .drop-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--fg-2);
+    }
+
+    .drop-subtitle {
+      font-size: 12px;
+      color: var(--fg-3);
+    }
+
+    .formats-hint {
+      display: flex;
+      gap: 4px;
+      margin-top: 12px;
+    }
+
+    .fmt-hint-chip {
+      height: 20px;
+      padding: 0 7px;
+      border-radius: var(--r-sm);
+      background: var(--bg-3);
+      color: var(--fg-3);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    /* ── File info section ── */
+    .file-section { display: flex; flex-direction: column; }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 16px;
+    }
+
+    .file-icon { color: var(--fg-3); flex-shrink: 0; display: flex; }
+
+    .file-name {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--fg-1);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .file-badge {
+      height: 20px;
+      padding: 0 7px;
+      border-radius: var(--r-sm);
+      background: var(--bg-3);
+      color: var(--fg-2);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0;
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: var(--fg-3);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 120ms;
+      flex-shrink: 0;
+    }
+    .clear-btn:hover { color: var(--fg-1); }
+
+    .row-divider {
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    .convert-section {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .convert-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--fg-3);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .format-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .fmt-btn {
+      flex: 1;
+      height: 36px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-2);
+      color: var(--fg-2);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
+      transition: background 120ms, color 120ms, border-color 120ms;
+    }
+
+    .fmt-btn:hover:not(:disabled) {
+      background: var(--bg-3);
+      color: var(--fg-1);
+      border-color: var(--border-strong);
+    }
+
+    .fmt-btn:active:not(:disabled) { opacity: 0.75; }
+
+    .fmt-btn:disabled {
+      background: var(--bg-3);
+      color: var(--fg-disabled);
+      border-color: var(--border-subtle);
+      cursor: not-allowed;
+    }
+
+    /* ── Privacy notice (inside card) ── */
+    .privacy-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .privacy-text {
+      font-size: 11px;
+      color: var(--fg-3);
+    }
+
+    /* ── Status card ── */
+    .status-card {
+      background: var(--bg-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-lg);
+      padding: 11px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-card.is-success { border-color: rgba(70, 165, 87, 0.25); }
+    .status-card.is-error   { border-color: rgba(229, 77, 46, 0.25); }
+
+    .status-icon { display: flex; align-items: center; flex-shrink: 0; }
+
+    .status-text {
+      font-size: 13px;
+      color: var(--fg-2);
+      flex: 1;
+    }
+    .status-card.is-success .status-text { color: var(--green-500); }
+    .status-card.is-error   .status-text { color: var(--red-500); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--border-strong);
+      border-top-color: var(--fg-2);
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--fg-3);
+      margin-top: 8px;
+    }
+
+    .footer a {
+      color: var(--fg-2);
+      text-decoration: none;
+      transition: color 120ms;
+    }
+    .footer a:hover { color: var(--fg-1); }
+
+    /* ── Utility ── */
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="container">
+
+      <!-- Header -->
+      <header class="header">
+        <div class="bolt-mark">
+          <svg width="12" height="15" viewBox="0 0 12 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 1L1 8.5H6.5L5.5 14L11 6.5H5.5L7 1Z" fill="#FFF301"/>
+          </svg>
+        </div>
+        <span class="wordmark">FontConv</span>
+        <span class="header-sep">·</span>
+        <span class="header-by"><a href="https://flitsdigital.nl" target="_blank" rel="noopener">Flits Digital</a></span>
+      </header>
+
+      <!-- Main card -->
+      <div class="card">
+
+        <!-- Drop zone (default state) -->
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="file-input" accept=".ttf,.otf,.woff,.woff2" tabindex="-1">
+          <div class="drop-inner">
+            <div class="drop-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path d="M12 15V4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                <path d="M8.5 7.5L12 4L15.5 7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <p class="drop-title">Sleep je font hier naartoe</p>
+            <p class="drop-subtitle">of klik om te kiezen</p>
+            <div class="formats-hint">
+              <span class="fmt-hint-chip">TTF</span>
+              <span class="fmt-hint-chip">OTF</span>
+              <span class="fmt-hint-chip">WOFF2</span>
+              <span class="fmt-hint-chip">WOFF</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- File info (shown after file is selected) -->
+        <div class="file-section" id="file-section" hidden>
+          <div class="file-row">
+            <span class="file-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9L13 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                <polyline points="13 2 13 9 20 9" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="file-name" id="file-name"></span>
+            <span class="file-badge" id="file-badge"></span>
+            <button class="clear-btn" id="clear-btn" title="Verwijder bestand">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="row-divider"></div>
+
+          <div class="convert-section">
+            <span class="convert-label">Converteren naar</span>
+            <div class="format-buttons" id="format-buttons">
+              <button class="fmt-btn" data-format="ttf">TTF</button>
+              <button class="fmt-btn" data-format="otf">OTF</button>
+              <button class="fmt-btn" data-format="woff2">WOFF2</button>
+              <button class="fmt-btn" data-format="woff">WOFF</button>
+            </div>
+          </div>
+
+          <div class="privacy-row">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#656565" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+            <span class="privacy-text">Verwerking op eigen server &middot; Fonts worden niet opgeslagen</span>
+          </div>
+        </div>
+
+      </div><!-- /card -->
+
+      <!-- Status -->
+      <div class="status-card" id="status-card" hidden>
+        <span class="status-icon" id="status-icon"></span>
+        <span class="status-text" id="status-text"></span>
+      </div>
+
+      <!-- Footer -->
+      <footer class="footer">
+        Variable font-data (fvar, gvar) blijft intact &middot; Max 50 MB
+      </footer>
+
+    </div>
+  </main>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────
+    let currentFile   = null;
+    let currentFormat = null;
+
+    // ── DOM refs ──────────────────────────────────────────────────────────
+    const dropzone      = document.getElementById('dropzone');
+    const fileInput     = document.getElementById('file-input');
+    const fileSection   = document.getElementById('file-section');
+    const fileNameEl    = document.getElementById('file-name');
+    const fileBadgeEl   = document.getElementById('file-badge');
+    const clearBtn      = document.getElementById('clear-btn');
+    const formatButtons = document.getElementById('format-buttons');
+    const statusCard    = document.getElementById('status-card');
+    const statusIcon    = document.getElementById('status-icon');
+    const statusText    = document.getElementById('status-text');
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    const getExt = (name) => name.split('.').pop().toLowerCase();
+
+    function showStatus(type, msg) {
+      statusCard.hidden = false;
+      statusCard.className = 'status-card' + (type !== 'loading' ? ' is-' + type : '');
+      statusText.textContent = msg;
+
+      if (type === 'loading') {
+        statusIcon.innerHTML = '<div class="spinner"></div>';
+      } else if (type === 'success') {
+        statusIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17L4 12" stroke="#46A557" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      } else {
+        statusIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#E54D2E" stroke-width="1.5"/><path d="M12 8v4m0 4h.01" stroke="#E54D2E" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      }
+    }
+
+    function setButtons(disabledFormat, allDisabled = false) {
+      document.querySelectorAll('.fmt-btn').forEach(btn => {
+        btn.disabled = allDisabled || btn.dataset.format === disabledFormat;
+      });
+    }
+
+    // ── File handling ─────────────────────────────────────────────────────
+    function handleFile(file) {
+      const ext = getExt(file.name);
+      if (!['ttf','otf','woff','woff2'].includes(ext)) {
+        showStatus('error', `Niet-ondersteund formaat: .${ext}`);
+        return;
+      }
+
+      currentFile   = file;
+      currentFormat = ext;
+
+      dropzone.hidden    = true;
+      fileSection.hidden = false;
+      fileNameEl.textContent  = file.name;
+      fileBadgeEl.textContent = ext.toUpperCase();
+
+      setButtons(ext);
+      statusCard.hidden = true;
+    }
+
+    function reset() {
+      currentFile   = null;
+      currentFormat = null;
+      fileInput.value       = '';
+      dropzone.hidden       = false;
+      fileSection.hidden    = true;
+      statusCard.hidden     = true;
+    }
+
+    // ── Conversion ────────────────────────────────────────────────────────
+    async function convertFont(targetFormat) {
+      if (!currentFile) return;
+
+      setButtons(null, true);
+      showStatus('loading', `Bezig met converteren naar ${targetFormat.toUpperCase()}…`);
+
+      const body = new FormData();
+      body.append('font', currentFile);
+      body.append('format', targetFormat);
+
+      try {
+        const res = await fetch('/api/convert', { method: 'POST', body });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        const blob    = await res.blob();
+        const base    = currentFile.name.replace(/\.[^.]+$/, '');
+        const outName = `${base}.${targetFormat}`;
+
+        const url = URL.createObjectURL(blob);
+        const a   = Object.assign(document.createElement('a'), { href: url, download: outName });
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showStatus('success', `Geconverteerd en gedownload als ${outName}`);
+
+      } catch (err) {
+        showStatus('error', err.message || 'Conversie mislukt.');
+      } finally {
+        setButtons(currentFormat);
+      }
+    }
+
+    // ── Events ────────────────────────────────────────────────────────────
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    dropzone.addEventListener('dragover',  (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', (e) => { if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('drag-over'); });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+
+    // Allow drop anywhere on the page (when file section is visible)
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+
+    clearBtn.addEventListener('click', reset);
+
+    formatButtons.addEventListener('click', (e) => {
+      const btn = e.target.closest('.fmt-btn');
+      if (btn && !btn.disabled) convertFont(btn.dataset.format);
+    });
+  </script>
+</body>
+</html>
